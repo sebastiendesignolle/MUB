@@ -1,7 +1,7 @@
-using Combinatorics
-using LinearAlgebra
-using Nemo
-using Primes
+import Combinatorics
+import LinearAlgebra
+import Nemo
+import Primes
 
 # Construction of the standard complete set of MUBs
 # The dimension d can be any integer greater than two
@@ -11,7 +11,7 @@ using Primes
 function mub(d; T=Float64)
     # Auxiliary function to compute the trace in finite fields
     function tr_ff(a)
-        parse(Int, string(tr(a)))
+        parse(Int, string(Nemo.tr(a)))
     end
     f = collect(Primes.factor(d))
     p = f[1][1]
@@ -26,8 +26,8 @@ function mub(d; T=Float64)
         end
     else
         B = zeros(Complex{T}, d, d, d+1)
-        B[:, :, 1] = Matrix(I, d, d)
-        f, x = finite_field(p, r, "x") # syntax for newer versions of Nemo
+        B[:, :, 1] = Matrix(LinearAlgebra.I, d, d)
+        f, x = Nemo.finite_field(p, r, "x") # syntax for newer versions of Nemo
         #  f, x = FiniteField(p, r, "x") # syntax for older versions of Nemo
         pow = [x^i for i in 0:r-1]
         el = [sum(digits(i; base=p, pad=r) .* pow) for i in 0:d-1]
@@ -54,7 +54,7 @@ end
 # Select a specific subset with k bases
 function mub(d::Int, k::Int, s::Int)
     B = mub(d)
-    subs = collect(combinations(1:size(B, 3), k))
+    subs = collect(Combinatorics.combinations(1:size(B, 3), k))
     sub = subs[s]
     return B[:, :, sub]
 end
@@ -74,9 +74,9 @@ function is_mu(B::Array{Complex{T}, 3}; tol=Base.rtoldefault(T)) where {T <: Abs
         else
             aux = 1 / √T(d)
         end
-        if abs(dot(B[:, a, x], B[:, b, y])) - aux > tol
+        if abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux > tol
             #  println([x, y, a, b])
-            #  println(abs(dot(B[:, a, x], B[:, b, y])) - aux)
+            #  println(abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux)
             return false
         end
     end
