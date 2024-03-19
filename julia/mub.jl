@@ -27,8 +27,8 @@ function mub(d; T=Float64)
     else
         B = zeros(Complex{T}, d, d, d+1)
         B[:, :, 1] = Matrix(I, d, d)
-        #  f, x = finite_field(p, r, "x") # syntax for newer versions of Nemo
-        f, x = FiniteField(p, r, "x") # syntax for older versions of Nemo
+        f, x = finite_field(p, r, "x") # syntax for newer versions of Nemo
+        #  f, x = FiniteField(p, r, "x") # syntax for older versions of Nemo
         pow = [x^i for i in 0:r-1]
         el = [sum(digits(i; base=p, pad=r) .* pow) for i in 0:d-1]
         if p == 2
