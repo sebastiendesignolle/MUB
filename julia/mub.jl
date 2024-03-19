@@ -1,4 +1,5 @@
 import Combinatorics
+import CyclotomicNumbers
 import LinearAlgebra
 import Nemo
 import Primes
@@ -8,7 +9,7 @@ import Primes
 # The output contains min_i p_i^r_i+1 bases where d = p_1^r_1*...*p_n^r_n
 # Reference: arXiv:1004.3348
 # Contact sebastien.designolle@gmail.com for questions
-function mub(d; T=Float64)
+function mub(d; T=ComplexF64)
     # Auxiliary function to compute the trace in finite fields
     function tr_ff(a)
         parse(Int, string(Nemo.tr(a)))
@@ -20,31 +21,39 @@ function mub(d; T=Float64)
         B_aux1 = mub(p^r; T=T)
         B_aux2 = mub(d÷p^r; T=T)
         k = min(size(B_aux1, 3), size(B_aux2, 3))
-        B = zeros(Complex{T}, d, d, k)
+        B = zeros(T, d, d, k)
         for j in 1:k
             B[:, :, j] = kron(B_aux1[:, :, j], B_aux2[:, :, j])
         end
     else
-        B = zeros(Complex{T}, d, d, d+1)
-        B[:, :, 1] = Matrix(LinearAlgebra.I, d, d)
+        if T <: Complex
+            γ = exp(2*im*T(π)/p)
+            inv_sqrt_d = 1 / √T(d)
+        elseif T <: CyclotomicNumbers.Cyc
+            γ = CyclotomicNumbers.E(p)
+            inv_sqrt_d = inv(CyclotomicNumbers.root(T(d)))
+        else
+            error("Datatype ", T, " not supported")
+        end
+        B = zeros(T, d, d, d+1)
+        B[:, :, 1] .= Matrix(LinearAlgebra.I, d, d)
         f, x = Nemo.finite_field(p, r, "x") # syntax for newer versions of Nemo
         #  f, x = FiniteField(p, r, "x") # syntax for older versions of Nemo
         pow = [x^i for i in 0:r-1]
         el = [sum(digits(i; base=p, pad=r) .* pow) for i in 0:d-1]
         if p == 2
             for i in 1:d, k in 0:d-1, q in 0:d-1
-                aux = one(Complex{T})
+                aux = one(T)
                 q_bin = digits(q; base=2, pad=r)
                 for m in 0:r-1, n in 0:r-1
                     aux *= conj(im^tr_ff(el[i]*el[q_bin[m+1]*2^m+1]*el[q_bin[n+1]*2^n+1]))
                 end
-                B[:, k+1, i+1] += (-1)^tr_ff(el[q+1]*el[k+1]) * aux * B[:, q+1, 1] / √T(d)
+                B[:, k+1, i+1] += (-1)^tr_ff(el[q+1]*el[k+1]) * aux * B[:, q+1, 1] * inv_sqrt_d
             end
         else
-            γ = exp(2*im*T(π)/p)
             inv_two = inv(2*one(f))
             for i in 1:d, k in 0:d-1, q in 0:d-1
-                B[:, k+1, i+1] += γ^tr_ff(-el[q+1]*el[k+1]) * γ^tr_ff(el[i]*el[q+1]*el[q+1]*inv_two) * B[:, q+1, 1] / √T(d)
+                B[:, k+1, i+1] += γ^tr_ff(-el[q+1]*el[k+1]) * γ^tr_ff(el[i]*el[q+1]*el[q+1]*inv_two) * B[:, q+1, 1] * inv_sqrt_d
             end
         end
     end
@@ -65,16 +74,25 @@ function mub(d::Int, k::Int)
 end
 
 # Check whether the input is indeed mutually unbiased
-function is_mu(B::Array{Complex{T}, 3}; tol=Base.rtoldefault(T)) where {T <: AbstractFloat}
+function check_mutually_unbiased(B::Array{T, 3}) where {T <: Number}
     d = size(B, 1)
+    if T <: Complex
+        tol = Base.rtoldefault(real(T))
+        inv_sqrt_d = 1 / √T(d)
+    elseif T <: CyclotomicNumbers.Cyc
+        tol = Base.rtoldefault(real(float(typeof(complex(one(T))))))
+        inv_sqrt_d = inv(CyclotomicNumbers.root(T(d)))
+    else
+        error("Datatype ", T, " not supported")
+    end
     k = size(B, 3)
     for x in 1:k, y in x:k, a in 1:d, b in 1:d
         if x == y
             aux = T(a == b)
         else
-            aux = 1 / √T(d)
+            aux = inv_sqrt_d
         end
-        if abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux > tol
+        if abs(abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux) > tol
             #  println([x, y, a, b])
             #  println(abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux)
             return false
