@@ -10,7 +10,8 @@ import Primes
 # Reference: arXiv:1004.3348
 # Contact sebastien.designolle@gmail.com for questions
 function mub(d; T=ComplexF64)
-    # Auxiliary function to compute the trace in finite fields
+    # Auxiliary function to compute the trace in finite fields as an Int
+    # Is quite dirty, but I could not find the proper syntax in Nemo
     function tr_ff(a)
         parse(Int, string(Nemo.tr(a)))
     end
@@ -74,27 +75,42 @@ function mub(d::Int, k::Int)
 end
 
 # Check whether the input is indeed mutually unbiased
-function check_mutually_unbiased(B::Array{T, 3}) where {T <: Number}
+function check_mutually_unbiased(B::Array{Complex{T}, 3}) where {T <: AbstractFloat}
+    tol = Base.rtoldefault(T)
     d = size(B, 1)
-    if T <: Complex
-        tol = Base.rtoldefault(real(T))
-        inv_sqrt_d = 1 / √T(d)
-    elseif T <: CyclotomicNumbers.Cyc
-        tol = Base.rtoldefault(real(float(typeof(complex(one(T))))))
-        inv_sqrt_d = inv(CyclotomicNumbers.root(T(d)))
-    else
-        error("Datatype ", T, " not supported")
-    end
     k = size(B, 3)
+    inv_d = 1 / T(d)
     for x in 1:k, y in x:k, a in 1:d, b in 1:d
+        # expected scalar product squared
         if x == y
-            aux = T(a == b)
+            sc2_exp = T(a == b)
         else
-            aux = inv_sqrt_d
+            sc2_exp = inv_d
         end
-        if abs(abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux) > tol
-            #  println([x, y, a, b])
-            #  println(abs(LinearAlgebra.dot(B[:, a, x], B[:, b, y])) - aux)
+        sc2 = LinearAlgebra.dot(B[:, a, x], B[:, b, y])
+        sc2 *= conj(sc2)
+        if abs(sc2 - sc2_exp) > tol
+            return false
+        end
+    end
+    return true
+end
+
+# Check whether the input is indeed mutually unbiased
+function check_mutually_unbiased(B::Array{T, 3}) where {T <: CyclotomicNumbers.Cyc}
+    d = size(B, 1)
+    k = size(B, 3)
+    inv_d = 1 / T(d)
+    for x in 1:k, y in x:k, a in 1:d, b in 1:d
+        # expected scalar product squared
+        if x == y
+            sc2_exp = T(a == b)
+        else
+            sc2_exp = inv_d
+        end
+        sc2 = LinearAlgebra.dot(B[:, a, x], B[:, b, y])
+        sc2 *= conj(sc2)
+        if sc2 != sc2_exp
             return false
         end
     end
