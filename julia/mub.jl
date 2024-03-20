@@ -5,20 +5,22 @@ import Nemo
 import Primes
 
 # Construction of the standard complete set of MUBs
-# The dimension d can be any integer greater than two
 # The output contains min_i p_i^r_i+1 bases where d = p_1^r_1*...*p_n^r_n
+# Exact computations with T=CyclotomicNumbers.Cyc{Rational{BigInt}}
 # Reference: arXiv:1004.3348
 # Contact sebastien.designolle@gmail.com for questions
-function mub(d; T=ComplexF64)
-    # Auxiliary function to compute the trace in finite fields as an Int
-    # Is quite dirty, but I could not find the proper syntax in Nemo
+function mub(d::Int; T=ComplexF64)
+    # the dimension d can be any integer greater than two
+    @assert d ≥ 2
+    # auxiliary function to compute the trace in finite fields as an Int
+    # is quite dirty, but I could not find the proper syntax in Nemo
     function tr_ff(a)
         parse(Int, string(Nemo.tr(a)))
     end
     f = collect(Primes.factor(d))
     p = f[1][1]
     r = f[1][2]
-    if length(f) > 1
+    if length(f) > 1 # different prime factors
         B_aux1 = mub(p^r; T=T)
         B_aux2 = mub(d÷p^r; T=T)
         k = min(size(B_aux1, 3), size(B_aux2, 3))
@@ -26,7 +28,7 @@ function mub(d; T=ComplexF64)
         for j in 1:k
             B[:, :, j] = kron(B_aux1[:, :, j], B_aux2[:, :, j])
         end
-    else
+    else # prime power
         if T <: Complex
             γ = exp(2*im*T(π)/p)
             inv_sqrt_d = 1 / √T(d)
@@ -62,16 +64,16 @@ function mub(d; T=ComplexF64)
 end
 
 # Select a specific subset with k bases
-function mub(d::Int, k::Int, s::Int)
-    B = mub(d)
+function mub(d::Int, k::Int, s::Int; T=ComplexF64)
+    B = mub(d; T=T)
     subs = collect(Combinatorics.combinations(1:size(B, 3), k))
     sub = subs[s]
     return B[:, :, sub]
 end
 
 # Select the first subset with k bases
-function mub(d::Int, k::Int)
-    return mub(d, k, 1)
+function mub(d::Int, k::Int; T=ComplexF64)
+    return mub(d, k, 1; T=T)
 end
 
 # Check whether the input is indeed mutually unbiased
