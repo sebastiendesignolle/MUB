@@ -1,12 +1,14 @@
 # Mutually Unbiased Bases
 
-Construction of mutually unbiased bases in various languages.
+Construction of mutually unbiased bases (MUBs) in various languages.
 Each language works independently of the others.
 Any contribution is welcome!
 
 ## Languages supported
 
 ### Julia
+The code has been improved and is now part of the package [Ket](https://github.com/araujoms/Ket.jl), which should be preferred in all cases, both for the increased quality of the implementation of these MUBs functions, but also for the ease of installation and the numerous other functionalities, for instance, the construction of symmetric, informationnally complete, positive operator-valued measures (SIC-POVMs).
+
 Dependencies: [Combinatorics](https://juliamath.github.io/Combinatorics.jl/dev/), [Nemo](https://nemocas.github.io/Nemo.jl/stable/) (there was a breaking update at some point, manually select the correct line if you run into problems), [Primes](https://juliamath.github.io/Primes.jl/stable/)
 
 ### Mathematica
